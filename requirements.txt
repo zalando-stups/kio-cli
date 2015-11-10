@@ -1,0 +1,4 @@
+clickclick>=0.9
+requests
+stups-zign>=0.16
+stups-cli-support>=0.7
