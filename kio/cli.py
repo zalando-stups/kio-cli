@@ -68,15 +68,19 @@ def get_url(config: dict):
     return url
 
 
-@cli.command()
+@cli.group(cls=AliasedGroup, invoke_without_command=True)
 @output_option
 @click.option('-s', '--since', default='1d')
+@click.option('-a', '--all', is_flag=True, help='List all applications (also disabled)')
 @click.option('-l', '--limit', help='Limit number of results', type=int, default=20)
-@click.pass_obj
-def applications(config, output, since, limit, **kwargs):
+@click.pass_context
+def applications(ctx, output, since, limit, **kwargs):
     '''Show applications'''
-    url = get_url(config)
+    if ctx.invoked_subcommand:
+        return
 
+    config = ctx.obj
+    url = get_url(config)
     token = get_token()
 
     params = {}
@@ -86,8 +90,9 @@ def applications(config, output, since, limit, **kwargs):
 
     rows = []
     for row in data:
-        row['last_modified_time'] = parse_time(row['last_modified'])
-        rows.append(row)
+        if row['active'] or kwargs['all']:
+            row['last_modified_time'] = parse_time(row['last_modified'])
+            rows.append(row)
 
     # we get the newest violations first, but we want to print them in order
     rows.sort(key=lambda r: r['id'])
@@ -95,6 +100,18 @@ def applications(config, output, since, limit, **kwargs):
     with OutputFormat(output):
         print_table(['id', 'team_id', 'name', 'subtitle', 'last_modified_time'],
                     rows, titles={'last_modified_time': 'Modified'}, max_column_widths={'name': 32, 'subtitle': 32})
+
+
+@applications.command('print')
+@click.pass_obj
+@click.argument('application_id')
+def print_app(config, application_id):
+    url = get_url(config)
+    token = get_token()
+
+    r = request(url, '/apps/{}'.format(application_id), token['access_token'])
+    r.raise_for_status()
+    print(r.json())
 
 
 def main():
