@@ -1,14 +1,15 @@
 import datetime
 
 import click
+import json
 
 import time
 from zign.api import get_named_token
-from clickclick import AliasedGroup, print_table, OutputFormat
+from clickclick import AliasedGroup, print_table, OutputFormat, Action
 
 import kio
 import stups_cli.config
-from kio.api import request
+from kio.api import request, session
 from kio.time import normalize_time
 
 
@@ -120,17 +121,19 @@ def print_app(config, application_id):
     print(r.json())
 
 
-@cli.group(cls=AliasedGroup, invoke_without_command=True)
+@cli.group(cls=AliasedGroup)
+def versions():
+    '''Manage application versions'''
+    pass
+
+
+@versions.command('list')
 @output_option
 @click.argument('application_id')
 @click.option('-s', '--since', default='1d')
-@click.pass_context
-def versions(ctx, application_id, output, since):
+@click.pass_obj
+def list_versions(config, application_id, output, since):
     '''Show application versions'''
-    if ctx.invoked_subcommand:
-        return
-
-    config = ctx.obj
     url = get_url(config)
     token = get_token()
 
@@ -150,6 +153,27 @@ def versions(ctx, application_id, output, since):
     with OutputFormat(output):
         print_table(['application_id', 'id', 'artifact', 'last_modified_time'],
                     rows, titles={'last_modified_time': 'Modified'})
+
+
+@versions.command('create')
+@click.argument('application_id')
+@click.argument('version')
+@click.argument('artifact')
+@click.option('-m', '--notes', help='Notes', default='')
+@click.pass_obj
+def create_version(config, application_id, version, artifact, notes):
+    '''Create a new application version'''
+    url = get_url(config)
+    token = get_token()
+
+    data = {'artifact': artifact, 'notes': notes}
+    with Action('Creating version {} {}..'.format(application_id, version)):
+        r = session.put('{}/apps/{}/versions/{}'.format(url, application_id, version),
+                        headers={'Authorization': 'Bearer {}'.format(token['access_token']),
+                                 'Content-Type': 'application/json'},
+                        timeout=10,
+                        data=json.dumps(data))
+        r.raise_for_status()
 
 
 def main():
