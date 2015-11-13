@@ -6,6 +6,7 @@ TIME_UNITS = {
     'm': 'minutes',
     'h': 'hours',
     'd': 'days',
+    'w': 'weeks',
 }
 
 TIME_PATTERN = \
@@ -14,7 +15,7 @@ TIME_PATTERN = \
     ^
     (?:
         (?P<magnitude> [+-]? \d+ )
-        (?P<unit> [smhd] )
+        (?P<unit> [smhdw] )
     |
         (?P<isodate> \d{4} - \d{2} - \d{2} (?: [ ] \d{2} : \d{2} : \d{2} (?: \. \d+)? ) )
     )

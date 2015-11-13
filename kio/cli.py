@@ -71,7 +71,7 @@ def get_url(config: dict):
 
 @cli.group(cls=AliasedGroup, invoke_without_command=True)
 @output_option
-@click.option('-s', '--since', default='1d')
+@click.option('-s', '--since')
 @click.option('-t', '--team', help='Filter by team')
 @click.option('-a', '--all', is_flag=True, help='List all applications (also disabled)')
 @click.option('-l', '--limit', help='Limit number of results', type=int, default=20)
@@ -85,6 +85,8 @@ def applications(ctx, output, since, team, limit, **kwargs):
     url = get_url(config)
     token = get_token()
 
+    since_str = parse_since(since) if since else ''
+
     params = {}
     r = request(url, '/apps', token['access_token'], params=params)
     r.raise_for_status()
@@ -96,6 +98,9 @@ def applications(ctx, output, since, team, limit, **kwargs):
             continue
 
         if team and row['team_id'] != team:
+            continue
+
+        if row['last_modified'] < since_str:
             continue
 
         row['last_modified_time'] = parse_time(row['last_modified'])
@@ -130,12 +135,14 @@ def versions():
 @versions.command('list')
 @output_option
 @click.argument('application_id')
-@click.option('-s', '--since', default='1d')
+@click.option('-s', '--since', default='60d')
 @click.pass_obj
 def list_versions(config, application_id, output, since):
     '''Show application versions'''
     url = get_url(config)
     token = get_token()
+
+    since_str = parse_since(since)
 
     params = {}
     r = request(url, '/apps/{}/versions'.format(application_id), token['access_token'], params=params)
@@ -144,6 +151,10 @@ def list_versions(config, application_id, output, since):
 
     rows = []
     for row in data:
+        if row['last_modified'] < since_str:
+            continue
+        r = request(url, '/apps/{}/versions/{}/approvals'.format(application_id, row['id']), token['access_token'])
+        row['approvals'] = ', '.join(['{}: {}'.format(x['approval_type'], x['user_id']) for x in r.json()])
         row['last_modified_time'] = parse_time(row['last_modified'])
         rows.append(row)
 
@@ -151,7 +162,7 @@ def list_versions(config, application_id, output, since):
     rows.sort(key=lambda r: r['last_modified_time'])
 
     with OutputFormat(output):
-        print_table(['application_id', 'id', 'artifact', 'last_modified_time'],
+        print_table(['application_id', 'id', 'artifact', 'approvals', 'last_modified_time'],
                     rows, titles={'last_modified_time': 'Modified'})
 
 
@@ -195,6 +206,32 @@ def approve_version(config, application_id, version, approval_type, notes):
                          timeout=10,
                          data=json.dumps(data))
         r.raise_for_status()
+
+
+@versions.command('show')
+@output_option
+@click.argument('application_id')
+@click.argument('version')
+@click.pass_obj
+def show_version(config, application_id, version, output):
+    '''Show version details'''
+    url = get_url(config)
+    token = get_token()
+
+    r = request(url, '/apps/{}/versions/{}'.format(application_id, version), token['access_token'])
+    r.raise_for_status()
+
+    rows = [{'key': k, 'value': v} for k, v in sorted(r.json().items())]
+
+    r = request(url, '/apps/{}/versions/{}/approvals'.format(application_id, version), token['access_token'])
+    r.raise_for_status()
+
+    for approval in r.json():
+        txt = '{approval_type} by {user_id} on {approved_at}'.format(**approval)
+        rows.append({'key': 'approvals', 'value': txt})
+
+    with OutputFormat(output):
+        print_table(['key', 'value'], rows)
 
 
 def main():
