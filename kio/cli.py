@@ -4,7 +4,7 @@ import click
 import json
 
 import time
-from zign.api import get_named_token
+import zign.api
 from clickclick import AliasedGroup, print_table, OutputFormat, Action
 
 import kio
@@ -52,9 +52,9 @@ def cli(ctx):
 
 def get_token():
     try:
-        token = get_named_token(['uid'], None, 'kio', None, None)
-    except:
-        raise click.UsageError('No valid OAuth token named "kio" found. Please use "zign token -n kio".')
+        token = zign.api.get_token('kio', ['uid'])
+    except Exception as e:
+        raise click.UsageError(str(e))
     return token
 
 
@@ -88,7 +88,7 @@ def applications(ctx, output, since, team, limit, **kwargs):
     since_str = parse_since(since) if since else ''
 
     params = {}
-    r = request(url, '/apps', token['access_token'], params=params)
+    r = request(url, '/apps', token, params=params)
     r.raise_for_status()
     data = r.json()
 
@@ -121,7 +121,7 @@ def print_app(config, application_id):
     url = get_url(config)
     token = get_token()
 
-    r = request(url, '/apps/{}'.format(application_id), token['access_token'])
+    r = request(url, '/apps/{}'.format(application_id), token)
     r.raise_for_status()
     print(r.json())
 
@@ -145,7 +145,7 @@ def list_versions(config, application_id, output, since):
     since_str = parse_since(since)
 
     params = {}
-    r = request(url, '/apps/{}/versions'.format(application_id), token['access_token'], params=params)
+    r = request(url, '/apps/{}/versions'.format(application_id), token, params=params)
     r.raise_for_status()
     data = r.json()
 
@@ -153,7 +153,7 @@ def list_versions(config, application_id, output, since):
     for row in data:
         if row['last_modified'] < since_str:
             continue
-        r = request(url, '/apps/{}/versions/{}/approvals'.format(application_id, row['id']), token['access_token'])
+        r = request(url, '/apps/{}/versions/{}/approvals'.format(application_id, row['id']), token)
         row['approvals'] = ', '.join(['{}: {}'.format(x['approval_type'], x['user_id']) for x in r.json()])
         row['last_modified_time'] = parse_time(row['last_modified'])
         rows.append(row)
@@ -180,7 +180,7 @@ def create_version(config, application_id, version, artifact, notes):
     data = {'artifact': artifact, 'notes': notes}
     with Action('Creating version {} {}..'.format(application_id, version)):
         r = session.put('{}/apps/{}/versions/{}'.format(url, application_id, version),
-                        headers={'Authorization': 'Bearer {}'.format(token['access_token']),
+                        headers={'Authorization': 'Bearer {}'.format(token),
                                  'Content-Type': 'application/json'},
                         timeout=10,
                         data=json.dumps(data))
@@ -201,7 +201,7 @@ def approve_version(config, application_id, version, approval_type, notes):
     data = {'approval_type': approval_type, 'notes': notes}
     with Action('Approving version {} {}..'.format(application_id, version)):
         r = session.post('{}/apps/{}/versions/{}/approvals'.format(url, application_id, version),
-                         headers={'Authorization': 'Bearer {}'.format(token['access_token']),
+                         headers={'Authorization': 'Bearer {}'.format(token),
                                   'Content-Type': 'application/json'},
                          timeout=10,
                          data=json.dumps(data))
@@ -218,12 +218,12 @@ def show_version(config, application_id, version, output):
     url = get_url(config)
     token = get_token()
 
-    r = request(url, '/apps/{}/versions/{}'.format(application_id, version), token['access_token'])
+    r = request(url, '/apps/{}/versions/{}'.format(application_id, version), token)
     r.raise_for_status()
 
     rows = [{'key': k, 'value': v} for k, v in sorted(r.json().items())]
 
-    r = request(url, '/apps/{}/versions/{}/approvals'.format(application_id, version), token['access_token'])
+    r = request(url, '/apps/{}/versions/{}/approvals'.format(application_id, version), token)
     r.raise_for_status()
 
     for approval in r.json():
