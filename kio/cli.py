@@ -50,9 +50,9 @@ def cli(ctx):
     ctx.obj = stups_cli.config.load_config('kio')
 
 
-def get_token():
+def get_token(scopes=None):
     try:
-        token = zign.api.get_token('kio', ['uid'])
+        token = zign.api.get_token('kio', scopes or ['uid'])
     except Exception as e:
         raise click.UsageError(str(e))
     return token
@@ -175,7 +175,7 @@ def list_versions(config, application_id, output, since):
 def create_version(config, application_id, version, artifact, notes):
     '''Create a new application version'''
     url = get_url(config)
-    token = get_token()
+    token = get_token(['uid', 'application.write'])
 
     data = {'artifact': artifact, 'notes': notes}
     with Action('Creating version {} {}..'.format(application_id, version)):
