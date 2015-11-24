@@ -190,22 +190,24 @@ def create_version(config, application_id, version, artifact, notes):
 @versions.command('approve')
 @click.argument('application_id')
 @click.argument('version')
-@click.option('-t', '--approval-type', help='Approval type', default='DEPLOY')
+@click.option('-t', '--approval-types', help='Approval types (comma separated)',
+              default='SPECIFICATION,CODE_CHANGE,TEST,DEPLOY')
 @click.option('-m', '--notes', help='Notes', default='')
 @click.pass_obj
-def approve_version(config, application_id, version, approval_type, notes):
+def approve_version(config, application_id, version, approval_types, notes):
     '''Approve application version'''
     url = get_url(config)
     token = get_token()
 
-    data = {'approval_type': approval_type, 'notes': notes}
-    with Action('Approving version {} {}..'.format(application_id, version)):
-        r = session.post('{}/apps/{}/versions/{}/approvals'.format(url, application_id, version),
-                         headers={'Authorization': 'Bearer {}'.format(token),
-                                  'Content-Type': 'application/json'},
-                         timeout=10,
-                         data=json.dumps(data))
-        r.raise_for_status()
+    for approval_type in approval_types.split(','):
+        data = {'approval_type': approval_type, 'notes': notes}
+        with Action('Approving {} of version {} {}..'.format(approval_type, application_id, version)):
+            r = session.post('{}/apps/{}/versions/{}/approvals'.format(url, application_id, version),
+                             headers={'Authorization': 'Bearer {}'.format(token),
+                                      'Content-Type': 'application/json'},
+                             timeout=10,
+                             data=json.dumps(data))
+            r.raise_for_status()
 
 
 @versions.command('show')
