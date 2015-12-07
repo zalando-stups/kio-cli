@@ -69,19 +69,20 @@ def get_url(config: dict):
     return url
 
 
-@cli.group(cls=AliasedGroup, invoke_without_command=True)
+@cli.group(cls=AliasedGroup)
+def applications():
+    '''Manage applications'''
+    pass
+
+
+@applications.command('list')
 @output_option
 @click.option('-s', '--since')
 @click.option('-t', '--team', help='Filter by team')
 @click.option('-a', '--all', is_flag=True, help='List all applications (also disabled)')
-@click.option('-l', '--limit', help='Limit number of results', type=int, default=20)
-@click.pass_context
-def applications(ctx, output, since, team, limit, **kwargs):
-    '''Show applications'''
-    if ctx.invoked_subcommand:
-        return
-
-    config = ctx.obj
+@click.pass_obj
+def list_apps(config, output, since, team, **kwargs):
+    '''List applications'''
     url = get_url(config)
     token = get_token()
 
@@ -114,16 +115,57 @@ def applications(ctx, output, since, team, limit, **kwargs):
                     rows, titles={'last_modified_time': 'Modified'}, max_column_widths={'name': 32, 'subtitle': 32})
 
 
-@applications.command('print')
+@applications.command('show')
+@output_option
 @click.pass_obj
 @click.argument('application_id')
-def print_app(config, application_id):
+def show_app(config, application_id, output):
+    '''Show application'''
     url = get_url(config)
     token = get_token()
 
     r = request(url, '/apps/{}'.format(application_id), token)
     r.raise_for_status()
-    print(r.json())
+
+    rows = [{'key': k, 'value': v} for k, v in sorted(r.json().items())]
+
+    with OutputFormat(output):
+        print_table(['key', 'value'], rows)
+
+
+@applications.command('update')
+@click.pass_obj
+@click.argument('application_id')
+@click.argument('key_val_pairs', nargs=-1)
+def update(config, application_id, key_val_pairs):
+    '''Update a single application
+
+    kio app up APPLICATION_ID KEY1=VAL1 ..'''
+    url = get_url(config)
+    token = get_token()
+
+    r = request(url, '/apps/{}'.format(application_id), token)
+    r.raise_for_status()
+    data = r.json()
+    for key_val in key_val_pairs:
+        key, sep, val = key_val.partition('=')
+        if key not in data:
+            raise click.UsageError('Field "{}" does not exist'.format(key))
+        if not val:
+            raise click.UsageError('Value missing for field "{}". You must provide KEY=VAL pairs.'.format(key))
+        if isinstance(data[key], bool):
+            val = val == 'true'
+        data[key] = val
+    # remove fields which we can't update
+    for key in ('id', 'last_modified', 'last_modified_by', 'criticality_level', 'created', 'created_by'):
+        del data[key]
+    with Action('Updating application {}..'.format(application_id)):
+        r = session.put('{}/apps/{}'.format(url, application_id),
+                        headers={'Authorization': 'Bearer {}'.format(token),
+                                 'Content-Type': 'application/json'},
+                        timeout=10,
+                        data=json.dumps(data))
+        r.raise_for_status()
 
 
 @cli.group(cls=AliasedGroup)
@@ -138,7 +180,7 @@ def versions():
 @click.option('-s', '--since', default='60d')
 @click.pass_obj
 def list_versions(config, application_id, output, since):
-    '''Show application versions'''
+    '''List application versions'''
     url = get_url(config)
     token = get_token()
 
