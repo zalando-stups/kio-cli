@@ -5,7 +5,7 @@ import json
 
 import time
 import zign.api
-from clickclick import AliasedGroup, print_table, OutputFormat, Action
+from clickclick import AliasedGroup, print_table, OutputFormat, Action, warning
 
 import kio
 import stups_cli.config
@@ -40,6 +40,12 @@ def print_version(ctx, param, value):
         return
     click.echo('Kio CLI {}'.format(kio.__version__))
     ctx.exit()
+
+
+def print_version_deprecation_notice():
+    warning('Please note that the GitHub approval flow obsoletes Kio versions, '
+            'i.e. you don\'t have to maintain version information in Kio anymore. '
+            'The corresponding API endpoints will be disabled on July 31st, 2017.')
 
 
 @click.group(cls=AliasedGroup, context_settings=CONTEXT_SETTINGS)
@@ -206,6 +212,7 @@ def list_versions(config, application_id, output, since):
     with OutputFormat(output):
         print_table(['application_id', 'id', 'artifact', 'approvals', 'last_modified_time'],
                     rows, titles={'last_modified_time': 'Modified'})
+        print_version_deprecation_notice()
 
 
 @versions.command('create')
@@ -227,6 +234,8 @@ def create_version(config, application_id, version, artifact, notes):
                         timeout=10,
                         data=json.dumps(data))
         r.raise_for_status()
+
+    print_version_deprecation_notice()
 
 
 @versions.command('approve')
@@ -250,6 +259,8 @@ def approve_version(config, application_id, version, approval_types, notes):
                              timeout=10,
                              data=json.dumps(data))
             r.raise_for_status()
+
+    print_version_deprecation_notice()
 
 
 @versions.command('show')
@@ -276,6 +287,7 @@ def show_version(config, application_id, version, output):
 
     with OutputFormat(output):
         print_table(['key', 'value'], rows)
+        print_version_deprecation_notice()
 
 
 def main():
