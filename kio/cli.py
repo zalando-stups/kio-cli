@@ -86,10 +86,11 @@ def applications():
 @click.option('-s', '--since')
 @click.option('-t', '--team', help='Filter by team')
 @click.option('-a', '--all', is_flag=True, help='List all applications (also disabled)')
+@click.option('--url', help='URL for Kio instance', metavar='URI')
 @click.pass_obj
-def list_apps(config, output, since, team, **kwargs):
+def list_apps(config, output, since, team, url, **kwargs):
     '''List applications'''
-    url = get_url(config)
+    url = url or get_url(config)
     token = get_token()
 
     since_str = parse_since(since) if since else ''
@@ -125,9 +126,10 @@ def list_apps(config, output, since, team, **kwargs):
 @output_option
 @click.pass_obj
 @click.argument('application_id')
-def show_app(config, application_id, output):
+@click.option('--url', help='URL for Kio instance', metavar='URI')
+def show_app(config, application_id, output, url):
     '''Show application'''
-    url = get_url(config)
+    url = url or get_url(config)
     token = get_token()
 
     r = request(url, '/apps/{}'.format(application_id), token)
@@ -143,11 +145,12 @@ def show_app(config, application_id, output):
 @click.pass_obj
 @click.argument('application_id')
 @click.argument('key_val_pairs', nargs=-1)
-def update(config, application_id, key_val_pairs):
+@click.option('--url', help='URL for Kio instance', metavar='URI')
+def update(config, application_id, key_val_pairs, url):
     '''Update a single application
 
     kio app up APPLICATION_ID KEY1=VAL1 ..'''
-    url = get_url(config)
+    url = url or get_url(config)
     token = get_token()
 
     r = request(url, '/apps/{}'.format(application_id), token)
@@ -184,10 +187,11 @@ def versions():
 @output_option
 @click.argument('application_id')
 @click.option('-s', '--since', default='60d')
+@click.option('--url', help='URL for Kio instance', metavar='URI')
 @click.pass_obj
-def list_versions(config, application_id, output, since):
+def list_versions(config, application_id, output, since, url):
     '''List application versions'''
-    url = get_url(config)
+    url = url or get_url(config)
     token = get_token()
 
     since_str = parse_since(since)
@@ -220,10 +224,11 @@ def list_versions(config, application_id, output, since):
 @click.argument('version')
 @click.argument('artifact')
 @click.option('-m', '--notes', help='Notes', default='')
+@click.option('--url', help='URL for Kio instance', metavar='URI')
 @click.pass_obj
-def create_version(config, application_id, version, artifact, notes):
+def create_version(config, application_id, version, artifact, notes, url):
     '''Create a new application version'''
-    url = get_url(config)
+    url = url or get_url(config)
     token = get_token(['uid', 'application.write'])
 
     data = {'artifact': artifact, 'notes': notes}
@@ -244,10 +249,11 @@ def create_version(config, application_id, version, artifact, notes):
 @click.option('-t', '--approval-types', help='Approval types (comma separated)',
               default='SPECIFICATION,CODE_CHANGE,TEST,DEPLOY')
 @click.option('-m', '--notes', help='Notes', default='')
+@click.option('--url', help='URL for Kio instance', metavar='URI')
 @click.pass_obj
-def approve_version(config, application_id, version, approval_types, notes):
+def approve_version(config, application_id, version, approval_types, notes, url):
     '''Approve application version'''
-    url = get_url(config)
+    url = url or get_url(config)
     token = get_token()
 
     for approval_type in approval_types.split(','):
@@ -267,10 +273,11 @@ def approve_version(config, application_id, version, approval_types, notes):
 @output_option
 @click.argument('application_id')
 @click.argument('version')
+@click.option('--url', help='URL for Kio instance', metavar='URI')
 @click.pass_obj
-def show_version(config, application_id, version, output):
+def show_version(config, application_id, version, output, url):
     '''Show version details'''
-    url = get_url(config)
+    url = url or get_url(config)
     token = get_token()
 
     r = request(url, '/apps/{}/versions/{}'.format(application_id, version), token)
