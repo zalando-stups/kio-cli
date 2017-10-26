@@ -42,12 +42,6 @@ def print_version(ctx, param, value):
     ctx.exit()
 
 
-def print_version_deprecation_notice():
-    warning('Please note that the GitHub approval flow obsoletes Kio versions, '
-            'i.e. you don\'t have to maintain version information in Kio anymore. '
-            'The corresponding API endpoints will be disabled on July 31st, 2017.')
-
-
 @click.group(cls=AliasedGroup, context_settings=CONTEXT_SETTINGS)
 @click.option('-V', '--version', is_flag=True, callback=print_version, expose_value=False, is_eager=True,
               help='Print the current version number and exit.')
@@ -172,122 +166,6 @@ def update(config, application_id, key_val_pairs):
                         timeout=10,
                         data=json.dumps(data))
         r.raise_for_status()
-
-
-@cli.group(cls=AliasedGroup)
-def versions():
-    '''Manage application versions'''
-    pass
-
-
-@versions.command('list')
-@output_option
-@click.argument('application_id')
-@click.option('-s', '--since', default='60d')
-@click.pass_obj
-def list_versions(config, application_id, output, since):
-    '''List application versions'''
-    url = get_url(config)
-    token = get_token()
-
-    since_str = parse_since(since)
-
-    params = {}
-    r = request(url, '/apps/{}/versions'.format(application_id), token, params=params)
-    r.raise_for_status()
-    data = r.json()
-
-    rows = []
-    for row in data:
-        if row['last_modified'] < since_str:
-            continue
-        r = request(url, '/apps/{}/versions/{}/approvals'.format(application_id, row['id']), token)
-        row['approvals'] = ', '.join(['{}: {}'.format(x['approval_type'], x['user_id']) for x in r.json()])
-        row['last_modified_time'] = parse_time(row['last_modified'])
-        rows.append(row)
-
-    # we get the newest violations first, but we want to print them in order
-    rows.sort(key=lambda r: r['last_modified_time'])
-
-    with OutputFormat(output):
-        print_table(['application_id', 'id', 'artifact', 'approvals', 'last_modified_time'],
-                    rows, titles={'last_modified_time': 'Modified'})
-        print_version_deprecation_notice()
-
-
-@versions.command('create')
-@click.argument('application_id')
-@click.argument('version')
-@click.argument('artifact')
-@click.option('-m', '--notes', help='Notes', default='')
-@click.pass_obj
-def create_version(config, application_id, version, artifact, notes):
-    '''Create a new application version'''
-    url = get_url(config)
-    token = get_token(['uid', 'application.write'])
-
-    data = {'artifact': artifact, 'notes': notes}
-    with Action('Creating version {} {}..'.format(application_id, version)):
-        r = session.put('{}/apps/{}/versions/{}'.format(url, application_id, version),
-                        headers={'Authorization': 'Bearer {}'.format(token),
-                                 'Content-Type': 'application/json'},
-                        timeout=10,
-                        data=json.dumps(data))
-        r.raise_for_status()
-
-    print_version_deprecation_notice()
-
-
-@versions.command('approve')
-@click.argument('application_id')
-@click.argument('version')
-@click.option('-t', '--approval-types', help='Approval types (comma separated)',
-              default='SPECIFICATION,CODE_CHANGE,TEST,DEPLOY')
-@click.option('-m', '--notes', help='Notes', default='')
-@click.pass_obj
-def approve_version(config, application_id, version, approval_types, notes):
-    '''Approve application version'''
-    url = get_url(config)
-    token = get_token()
-
-    for approval_type in approval_types.split(','):
-        data = {'approval_type': approval_type, 'notes': notes}
-        with Action('Approving {} of version {} {}..'.format(approval_type, application_id, version)):
-            r = session.post('{}/apps/{}/versions/{}/approvals'.format(url, application_id, version),
-                             headers={'Authorization': 'Bearer {}'.format(token),
-                                      'Content-Type': 'application/json'},
-                             timeout=10,
-                             data=json.dumps(data))
-            r.raise_for_status()
-
-    print_version_deprecation_notice()
-
-
-@versions.command('show')
-@output_option
-@click.argument('application_id')
-@click.argument('version')
-@click.pass_obj
-def show_version(config, application_id, version, output):
-    '''Show version details'''
-    url = get_url(config)
-    token = get_token()
-
-    r = request(url, '/apps/{}/versions/{}'.format(application_id, version), token)
-    r.raise_for_status()
-
-    rows = [{'key': k, 'value': v} for k, v in sorted(r.json().items())]
-
-    r = request(url, '/apps/{}/versions/{}/approvals'.format(application_id, version), token)
-    r.raise_for_status()
-
-    for approval in r.json():
-        txt = '{approval_type} by {user_id} on {approved_at}'.format(**approval)
-        rows.append({'key': 'approvals', 'value': txt})
-
-    with OutputFormat(output):
-        print_table(['key', 'value'], rows)
-        print_version_deprecation_notice()
 
 
 def main():

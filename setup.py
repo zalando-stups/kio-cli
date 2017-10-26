@@ -26,7 +26,7 @@ def read_version(package):
 NAME = 'stups-kio'
 MAIN_PACKAGE = 'kio'
 VERSION = read_version(MAIN_PACKAGE)
-DESCRIPTION = 'Simple command line utility to manage Kio applications and application versions'
+DESCRIPTION = 'Simple command line utility to manage Kio applications'
 LICENSE = 'Apache License 2.0'
 URL = 'https://github.com/zalando-stups/kio-cli'
 AUTHOR = 'Henning Jacobs'
