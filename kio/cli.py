@@ -5,7 +5,7 @@ import json
 
 import time
 import zign.api
-from clickclick import AliasedGroup, print_table, OutputFormat, Action, warning
+from clickclick import AliasedGroup, print_table, OutputFormat, Action
 
 import kio
 import stups_cli.config
