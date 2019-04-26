@@ -26,7 +26,7 @@ TIME_PATTERN = \
 
 def normalize_time(s, default=None, past=False):
     """
-    If a time delta of the form /[+-]?\d+[smdh]/ is given, returns an ISO date string representing the
+    If a time delta of the form /[+-]?\\d+[smdh]/ is given, returns an ISO date string representing the
     current time offset by that delta. If an ISO date string is given, returns it unaltered. If another
     string is given and a default is specified, returns the result of normalizing the default. Assumes
     all ISO strings omit the "T" between date and time.
