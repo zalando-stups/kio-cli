@@ -79,9 +79,10 @@ def applications():
 @output_option
 @click.option('-s', '--since')
 @click.option('-t', '--team', help='Filter by team')
+@click.option('--incident-contact', help='Filter by 24x7 incident contact')
 @click.option('-a', '--all', is_flag=True, help='List all applications (also disabled)')
 @click.pass_obj
-def list_apps(config, output, since, team, **kwargs):
+def list_apps(config, output, since, team, incident_contact, **kwargs):
     '''List applications'''
     url = get_url(config)
     token = get_token()
@@ -101,6 +102,9 @@ def list_apps(config, output, since, team, **kwargs):
         if team and row['team_id'] != team:
             continue
 
+        if incident_contact and row.get('incident_contact', '') != incident_contact:
+            continue
+
         if row['last_modified'] < since_str:
             continue
 
@@ -111,7 +115,7 @@ def list_apps(config, output, since, team, **kwargs):
     rows.sort(key=lambda r: r['id'])
 
     with OutputFormat(output):
-        print_table(['id', 'team_id', 'name', 'subtitle', 'last_modified_time'],
+        print_table(['id', 'team_id', 'incident_contact', 'name', 'subtitle', 'last_modified_time'],
                     rows, titles={'last_modified_time': 'Modified'}, max_column_widths={'name': 32, 'subtitle': 32})
 
 
