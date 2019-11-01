@@ -137,6 +137,40 @@ def show_app(config, application_id, output):
         print_table(['key', 'value'], rows)
 
 
+@applications.command('create')
+@click.pass_obj
+@click.argument('application_id')
+@click.argument('key_val_pairs', nargs=-1)
+def create(config, application_id, key_val_pairs):
+    '''Create a single application'''
+
+    url = get_url(config)
+    token = get_token()
+
+    r = request(url, '/apps/{}'.format(application_id), token)
+    if r.status_code != 404:
+        raise click.UsageError('Application "{}" already exists'.format(application_id))
+
+    data = {"active": True}
+    for key_val in key_val_pairs:
+        key, sep, val = key_val.partition('=')
+        data[key] = val
+
+    if "name" not in data:
+        raise click.UsageError('You must provide the "name" field.')
+
+    if "team_id" not in data:
+        raise click.UsageError('You must provide the "team_id" field.')
+
+    with Action('Creating application {}..'.format(application_id)):
+        r = session.put('{}/apps/{}'.format(url, application_id),
+                        headers={'Authorization': 'Bearer {}'.format(token),
+                                 'Content-Type': 'application/json'},
+                        timeout=10,
+                        data=json.dumps(data))
+        r.raise_for_status()
+
+
 @applications.command('update')
 @click.pass_obj
 @click.argument('application_id')
