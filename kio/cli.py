@@ -161,7 +161,7 @@ def update(config, application_id, key_val_pairs):
             val = val == 'true'
         data[key] = val
     # remove fields which we can't update
-    for key in ('id', 'last_modified', 'last_modified_by', 'criticality_level', 'created', 'created_by'):
+    for key in ('id', 'last_modified', 'last_modified_by', 'created', 'created_by'):
         del data[key]
     with Action('Updating application {}..'.format(application_id)):
         r = session.put('{}/apps/{}'.format(url, application_id),
