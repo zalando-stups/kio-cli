@@ -115,8 +115,10 @@ def list_apps(config, output, since, team, incident_contact, **kwargs):
     rows.sort(key=lambda r: r['id'])
 
     with OutputFormat(output):
-        print_table(['id', 'team_id', 'incident_contact', 'name', 'subtitle', 'last_modified_time'],
-                    rows, titles={'last_modified_time': 'Modified'}, max_column_widths={'name': 32, 'subtitle': 32})
+        print_table(['id', 'team_id', 'criticality_level', 'incident_contact',
+                     'name', 'subtitle', 'last_modified_time'],
+                    rows, titles={'last_modified_time': 'Modified', 'criticality_level': 'Tier'},
+                    max_column_widths={'name': 32, 'subtitle': 32})
 
 
 @applications.command('show')
