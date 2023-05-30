@@ -10,8 +10,7 @@ TIME_UNITS = {
 }
 
 TIME_PATTERN = \
-    re.compile(r"""
-    (?x)
+    re.compile(r"""(?x)
     ^
     (?:
         (?P<magnitude> [+-]? \d+ )

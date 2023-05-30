@@ -6,14 +6,19 @@ notifications:
 pipeline:
   - id: build
     type: script
-    overlay: ci/python
+    vm_config:
+      type: linux
+      image: cdp-runtime/python-3.9
     commands:
     - desc: "Install dependencies"
-      cmd: pip install -r requirements.txt
+      cmd: |
+        pip install -r requirements.txt
     - desc: "Run Tests"
       cmd: python3 setup.py test
     - desc: "Check code style"
-      cmd: python3 setup.py flake8
+      cmd: |
+        pip3 install flake8
+        flake8
     - desc: "Build docker image that will upload package"
       cmd: |
         VERSION=$(./next-version)
